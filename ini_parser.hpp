@@ -1,5 +1,5 @@
 /* 
- *  Copyright (c) 2013-2015 Denilson das Mercês Amorim <dma_2012@hotmail.com>
+ *  Copyright (c) 2013-2015 Denilson das MercÃªs Amorim <dma_2012@hotmail.com>
  *  
  *  This software is provided 'as-is', without any express or implied
  *  warranty. In no event will the authors be held liable for any damages
@@ -203,12 +203,8 @@ namespace linb
                         if((pos = line.find_first_of(';')) != line.npos)
                             line.erase(pos);
 
-                        if ((pos = line.find_last_of('/')) != line.npos)
-                        {
-                            if (line[pos - 1] == '/' && line[pos - 2] == ' ')
-                                line.erase(pos - 2);
-                        }
-                        
+                        if ((pos = line.rfind(" //")) != line.npos)
+                            line.erase(pos);
                         
                         // Trim the string, and if it gets empty, skip this line
                         if(trim(line, true, true).empty())
@@ -294,11 +290,8 @@ namespace linb
                         if((pos = line.find_first_of(';')) != line.npos)
                             line.erase(pos);
 
-                        if ((pos = line.find_last_of('/')) != line.npos)
-                        {
-                            if (line[pos - 1] == '/' && line[pos - 2] == ' ')
-                                line.erase(pos - 2);
-                        }
+                        if ((pos = line.rfind(" //")) != line.npos)
+                            line.erase(pos);
                         
                         // Trim the string, and if it gets empty, skip this line
                         if(trim(line, true, true).empty())
