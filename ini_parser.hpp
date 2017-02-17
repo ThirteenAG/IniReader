@@ -1,6 +1,7 @@
 /* 
  *  Copyright (c) 2013-2015 Denilson das Mercês Amorim <dma_2012@hotmail.com>
- *  
+ *  Copyright (c) 2017 ThirteenAG
+ *
  *  This software is provided 'as-is', without any express or implied
  *  warranty. In no event will the authors be held liable for any damages
  *  arising from the use of this software.
@@ -35,6 +36,7 @@
 #include <functional>   // for std::function
 #include <vector>		// for std::vector
 #include <sstream>
+#include <fstream>
 
 namespace linb
 {
@@ -161,100 +163,6 @@ namespace linb
             /* Too lazy to continue this container... If you need more methods, just add it */
             
 
-#if 1
-            bool read_file(const char_type* filename)
-            {
-                /* Using C stream in a STL-like container, funny?
-                 */
-                if(FILE* f = fopen(filename, "r"))
-                {
-                    key_container* keys = nullptr;
-                    char_type buf[2048];
-                    string_type line;
-                    string_type key;
-                    string_type value;
-                    string_type null_string;
-                    size_type pos;
-                    
-                    // Trims an string
-                    auto trim = [](string_type& s, bool trimLeft, bool trimRight) -> string_type&
-                    {
-                        if(s.size())
-                        {
-                            // Ignore UTF-8 BOM
-                            while(s.size() >= 3 && s[0] == (char)(0xEF) && s[1] == (char)(0xBB) && s[2] == (char)(0xBF))
-                                s.erase(s.begin(), s.begin() + 3);
-
-                            if(trimLeft)
-                                s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::function<int(int)>(::isspace))));
-                            if(trimRight)
-                                s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::function<int(int)>(::isspace))).base(), s.end());
-                        }
-                        return s;
-                    };
-                    
-                    // Start parsing
-                    while(fgets(buf, sizeof(buf), f))
-                    {
-                        // What a thing, reading into a char buffer and then putting in the string...
-                        line = buf;
-                        
-                        // Find comment and remove anything after it from the line
-                        if((pos = line.find_first_of(';')) != line.npos)
-                            line.erase(pos);
-
-                        if ((pos = line.rfind(" //")) != line.npos)
-                            line.erase(pos);
-                        
-                        // Trim the string, and if it gets empty, skip this line
-                        if(trim(line, true, true).empty())
-                            continue;
-                        
-                        // Find section name
-                        if(line.front() == '[' && line.back() == ']')
-                        {
-                            pos = line.length() - 1; //line.find_first_of(']');
-                            if(pos != line.npos)
-                            {
-                                trim(key.assign(line, 1, pos-1), true, true);
-                                keys = &data[std::move(key)];  // Create section
-                            }
-                            else
-                                keys = nullptr;
-                        }
-                        else
-                        {
-                            // Find key and value positions
-                            pos = line.find_first_of('=');
-                            if(pos == line.npos)
-                            {
-                                // There's only the key
-                                key = line;         // No need for trim, line is already trimmed
-                                value.clear();
-                            }
-                            else
-                            {
-                                // There's the key and the value
-                                trim(key.assign(line, 0, pos), false, true);                  // trim the right
-                                trim(value.assign(line, pos + 1, line.npos), true, false);    // trim the left
-                            }
-
-                            // Put the key/value into the current keys object, or into the section "" if no section has been found
-                            #if __cplusplus >= 201103L || _MSC_VER >= 1800
-                            (keys ? *keys : data[null_string]).emplace(std::move(key), std::move(value));
-                            #else
-                            (keys ? *keys : data[null_string])[key] = value;
-                            key.clear(); value.clear();
-                            #endif
-                        }
-                    }
-                    
-                    fclose(f);
-                    return true;
-                }
-                return false;
-            }
-
             bool read_file(std::stringstream& ini_mem)
             {
                 if(ini_mem.rdbuf()->in_avail())
@@ -341,6 +249,19 @@ namespace linb
                 return false;
             }
 
+            bool read_file(const char_type* filename)
+            {
+                std::ifstream file(filename, std::ios::in);
+                if (file.is_open())
+                {
+                    std::stringstream ss;
+                    ss << file.rdbuf();
+                    file.close();
+                    return read_file(ss);
+                }
+                return false;
+            }
+
             /*
              *  Dumps the content of this container into an ini file
              */
@@ -388,11 +309,7 @@ namespace linb
             bool write_file(const StringType& filename)
             {
                 return write_file(filename.c_str());
-            }
-#endif       
-            
-
-        
+            }        
     };
     
     
