@@ -147,7 +147,7 @@ public:
         return *this == ir;
     }
 
-    const std::string GetIniPath()
+    const std::string& GetIniPath()
     {
         return m_szFileName;
     }
