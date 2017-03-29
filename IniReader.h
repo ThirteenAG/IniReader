@@ -230,11 +230,11 @@ public:
                     config[szKey].erase(config[szKey].size() - 1);
 
                 strcpy(szResult, config[szKey].c_str());
+                return szResult;
             }
         }
-        catch (...) {
-            strcpy(szResult, szDefaultValue);
-        }
+        catch (...) { }
+        strcpy(szResult, szDefaultValue);
         return szResult;
     }
 
