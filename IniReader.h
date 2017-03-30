@@ -184,7 +184,8 @@ public:
     int ReadInteger(char* szSection, char* szKey, int iDefaultValue)
     {
         try {
-            return std::stoi(data.get(szSection, szKey, std::to_string(iDefaultValue)));
+            auto str = data.get(szSection, szKey, std::to_string(iDefaultValue));
+            return std::stoi(str, nullptr, starts_with(str.c_str(), "0x", false) ? 16 : 10);
         }
         catch (...) {
             return iDefaultValue;
