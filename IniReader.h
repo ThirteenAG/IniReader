@@ -64,7 +64,7 @@ inline bool ends_with(const char* str, const char* prefix, bool case_sensitive)
     auto str2 = &str[strlen(str) - 1];
     auto prefix2 = &prefix[strlen(prefix) - 1];
 
-    while (prefix2 > prefix)
+    while (prefix2 >= prefix)
     {
         bool equal;
         if (case_sensitive)
