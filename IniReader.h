@@ -133,6 +133,9 @@ public:
 
         for (auto& section : data)
         {
+            if (ir.data.find(section.first) == ir.data.end())
+                return false;
+            
             if (section.second.size() != ir.data.find(section.first)->second.size())
                 return false;
 
