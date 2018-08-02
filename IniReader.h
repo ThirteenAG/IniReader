@@ -2,6 +2,7 @@
 #define INIREADER_H
 #include "ini_parser.hpp"
 #include <string>
+#include <string_view>
 #include <Windows.h>
 
 /*
@@ -90,14 +91,9 @@ public:
         SetIniPath("");
     }
 
-    CIniReader(char* szFileName)
+    CIniReader(std::string_view szFileName)
     {
         SetIniPath(szFileName);
-    }
-
-    CIniReader(const char* szFileName)
-    {
-        SetIniPath((char*)szFileName);
     }
 
     CIniReader(std::stringstream& ini_mem)
@@ -112,9 +108,9 @@ public:
 
         for (auto& section : data)
         {
-            for (auto& key : data[section.first])
+            for (auto& key : data.at(section.first))
             {
-                if (key.second != ir.data[section.first][key.first])
+                if (key.second != ir.data.at(section.first)[key.first])
                     return false;
             }
         }
@@ -135,7 +131,7 @@ public:
         {
             if (ir.data.find(section.first) == ir.data.end())
                 return false;
-            
+
             if (section.second.size() != ir.data.find(section.first)->second.size())
                 return false;
 
@@ -160,7 +156,7 @@ public:
         SetIniPath("");
     }
 
-    void SetIniPath(char* szFileName)
+    void SetIniPath(std::string_view szFileName)
     {
         char buffer[MAX_PATH];
         HMODULE hm = NULL;
@@ -168,142 +164,117 @@ public:
         GetModuleFileNameA(hm, buffer, sizeof(buffer));
         std::string modulePath = buffer;
 
-        if (strchr(szFileName, ':') != NULL)
+        if (szFileName.find(':') != std::string_view::npos)
         {
             m_szFileName = szFileName;
         }
-        else if (std::string(szFileName).length() == 0)
+        else if (szFileName.length() == 0)
         {
             m_szFileName = modulePath.substr(0, modulePath.find_last_of('.')) + ".ini";
         }
         else
         {
-            m_szFileName = modulePath.substr(0, modulePath.rfind('\\') + 1) + szFileName;
+            m_szFileName = modulePath.substr(0, modulePath.rfind('\\') + 1) + szFileName.data();
         }
 
         data.load_file(m_szFileName);
     }
 
-    int ReadInteger(char* szSection, char* szKey, int iDefaultValue)
+    int ReadInteger(std::string_view szSection, std::string_view szKey, int iDefaultValue)
     {
-        try {
-            auto str = data.get(szSection, szKey, std::to_string(iDefaultValue));
-            return std::stoi(str, nullptr, starts_with(str.c_str(), "0x", false) ? 16 : 10);
-        }
-        catch (...) {
-            return iDefaultValue;
-        }
+        auto str = data.get(szSection.data(), szKey.data(), std::to_string(iDefaultValue));
+        return std::stoi(str, nullptr, starts_with(str.c_str(), "0x", false) ? 16 : 10);
     }
 
-    float ReadFloat(char* szSection, char* szKey, float fltDefaultValue)
+    float ReadFloat(std::string_view szSection, std::string_view szKey, float fltDefaultValue)
     {
-        try {
-            return (float)atof(data.get(szSection, szKey, std::to_string(fltDefaultValue)).c_str());
-        }
-        catch (...) {
-            return fltDefaultValue;
-        }
+        return (float)atof(data.get(szSection.data(), szKey.data(), std::to_string(fltDefaultValue)).c_str());
     }
 
-    bool ReadBoolean(char* szSection, char* szKey, bool bolDefaultValue)
+    bool ReadBoolean(std::string_view szSection, std::string_view szKey, bool bolDefaultValue)
     {
-        try {
-            auto& config = data[szSection];
-            if (config.count(szKey))
-            {
-                if (config[szKey].size() == 1) return config[szKey].front() != '0';
-                return !!compare(config[szKey], "false", false);
-            }
+        auto val = data.get(szSection.data(), szKey.data(), "");
+        if (!val.empty())
+        {
+            if (val.size() == 1)
+                return val.front() != '0';
+            else
+                return compare(val, "false", false);
         }
-        catch (...) {
-            return bolDefaultValue;
-        }
+        return bolDefaultValue;
     }
 
-    char* ReadString(char* szSection, char* szKey, const char* szDefaultValue)
+    std::string ReadString(std::string_view szSection, std::string_view szKey, std::string_view szDefaultValue)
     {
-        char* szResult = new char[255];
-        try {
-            auto& config = data[szSection];
-            if (config.count(szKey))
-            {
-                if (config[szKey].at(0) == '\"' || config[szKey].at(0) == '\'')
-                    config[szKey].erase(0, 1);
+        auto s = data.get(szSection.data(), szKey.data(), szDefaultValue.data());
 
-                if (config[szKey].at(config[szKey].size() - 1) == '\"' || config[szKey].at(config[szKey].size() - 1) == '\'')
-                    config[szKey].erase(config[szKey].size() - 1);
+        if (!s.empty())
+        {
+            if (s.at(0) == '\"' || s.at(0) == '\'')
+                s.erase(0, 1);
 
-                strcpy(szResult, config[szKey].c_str());
-                return szResult;
-            }
+            if (s.at(s.size() - 1) == '\"' || s.at(s.size() - 1) == '\'')
+                s.erase(s.size() - 1);
         }
-        catch (...) { }
-        strcpy(szResult, szDefaultValue);
-        return szResult;
+
+        return s;
     }
 
-    std::string ReadString(char* szSection, char* szKey, std::string szDefaultValue)
-    {
-        char* str = ReadString(szSection, szKey, szDefaultValue.c_str());
-        std::string* szResult = new std::string(str);
-        return *szResult;
-    }
-
-    void WriteInteger(char* szSection, char* szKey, int iValue, bool useparser = false)
+    void WriteInteger(std::string_view szSection, std::string_view szKey, int iValue, bool useparser = false)
     {
         if (useparser)
         {
-            data.set(szSection, szKey, std::to_string(iValue));
+            data.set(szSection.data(), szKey.data(), std::to_string(iValue));
             data.write_file(m_szFileName);
         }
         else
         {
             char szValue[255];
             _snprintf_s(szValue, 255, "%s%d", " ", iValue);
-            WritePrivateProfileStringA(szSection, szKey, szValue, m_szFileName.c_str());
+            WritePrivateProfileStringA(szSection.data(), szKey.data(), szValue, m_szFileName.c_str());
         }
     }
 
-    void WriteFloat(char* szSection, char* szKey, float fltValue, bool useparser = false)
+    void WriteFloat(std::string_view szSection, std::string_view szKey, float fltValue, bool useparser = false)
     {
         if (useparser)
         {
-            data.set(szSection, szKey, std::to_string(fltValue));
+            data.set(szSection.data(), szKey.data(), std::to_string(fltValue));
             data.write_file(m_szFileName);
         }
         else
         {
             char szValue[255];
             _snprintf_s(szValue, 255, "%s%f", " ", fltValue);
-            WritePrivateProfileStringA(szSection, szKey, szValue, m_szFileName.c_str());
+            WritePrivateProfileStringA(szSection.data(), szKey.data(), szValue, m_szFileName.c_str());
         }
     }
 
-    void WriteBoolean(char* szSection, char* szKey, bool bolValue, bool useparser = false)
+    void WriteBoolean(std::string_view szSection, std::string_view szKey, bool bolValue, bool useparser = false)
     {
         if (useparser)
         {
-            data.set(szSection, szKey, std::to_string(bolValue));
+            data.set(szSection.data(), szKey.data(), std::to_string(bolValue));
             data.write_file(m_szFileName);
         }
         else
         {
             char szValue[255];
             _snprintf_s(szValue, 255, "%s%s", " ", bolValue ? "True" : "False");
-            WritePrivateProfileStringA(szSection, szKey, szValue, m_szFileName.c_str());
+            WritePrivateProfileStringA(szSection.data(), szKey.data(), szValue, m_szFileName.c_str());
         }
     }
 
-    void WriteString(char* szSection, char* szKey, char* szValue, bool useparser = false)
+    void WriteString(std::string_view szSection, std::string_view szKey, std::string_view szValue, bool useparser = false)
     {
         if (useparser)
         {
-            data.set(szSection, szKey, szValue);
+            data.set(szSection.data(), szKey.data(), szValue.data());
             data.write_file(m_szFileName);
         }
         else
         {
-            WritePrivateProfileStringA(szSection, szKey, szValue, m_szFileName.c_str());
+            WritePrivateProfileStringA(szSection.data(), szKey.data(), szValue.data(), m_szFileName.c_str());
         }
     }
 };
