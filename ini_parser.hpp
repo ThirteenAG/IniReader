@@ -315,7 +315,7 @@ namespace linb
         {
             FILE* f;
             errno_t err;
-            if ((err = fopen_s(&f, filename, "w")) != 0)
+            if ((err = fopen_s(&f, filename, "w")) == 0)
             {
                 bool first = true;
                 for (auto& sec : this->data)
