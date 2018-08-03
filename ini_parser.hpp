@@ -182,9 +182,15 @@ namespace linb
         {
             return data.count(sect);
         }
-        iterator find(const string_type& sect)
+        iterator find(const string_type& sect, bool case_sensitive = false)
         {
-            return data.find(sect);
+            if (!case_sensitive)
+                return std::find_if(data.begin(), data.end(),
+                    [&sect](auto& s) { return std::equal(s.first.begin(), s.first.end(), sect.begin(), sect.end(),
+                        [](char a, char b) {return tolower(a) == tolower(b); });
+            });
+            else
+                return data.find(sect);
         }
 
         /* Gets a value from the specified section & key, default_value is returned if the sect & key doesn't exist */
