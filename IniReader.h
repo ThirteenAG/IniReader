@@ -165,24 +165,12 @@ private:
 
                         if (bKeepInlineData)
                         {
+                            bool bAddSpace = false;
                             std::string comment = line.substr(line.find('=') + 1);
                             // after the equals sign we may have a space, so check for that and trim it
                             comment.erase(comment.begin(), std::find_if(comment.begin(), comment.end(), std::not_fn(std::function<int(int)>(::isspace))));
-                            // check if there even is space after the value and add it if it's not there
-                            if (comment.at(1) != ' ')
-                            {
-                                if (comment.find(';') != std::string::npos)
-                                {
-                                    comment = comment.substr(comment.find(';'));
-                                    write_line += ' ';
-                                }
-                                else if (comment.find("//") != std::string::npos)
-                                {
-                                    comment = comment.substr(comment.find("//"));
-                                    write_line += ' ';
-                                }
-                            }
-                            else
+                            // check if there even is a comment
+                            if ((comment.find(';') != std::string::npos) || (comment.find("//") != std::string::npos))
                             {
                                 // search for the first instance of a space and move it there
                                 pos = 0;
@@ -193,10 +181,37 @@ private:
                                     pos++;
                                 }
                                 if (pos)
-                                    comment = comment.substr(pos);
-                            }
+                                {
+                                    // move back if we overshoot
+                                    size_t backpos = 0;
+                                    if ((backpos = comment.rfind(';', pos)) != std::string::npos)
+                                    {
+                                        pos = backpos;
+                                        bAddSpace = true;
+                                    }
+                                    else if ((backpos = comment.rfind("//", pos)) != std::string::npos)
+                                    {
+                                        pos = backpos;
+                                        bAddSpace = true;
+                                    }
 
-                            write_line += comment;
+                                    comment = comment.substr(pos);
+                                }
+                                else if (comment.find(';') != std::string::npos)
+                                {
+                                    comment = comment.substr(comment.find(';'));
+                                    bAddSpace = true;
+                                }
+                                else if (comment.find("//") != std::string::npos)
+                                {
+                                    comment = comment.substr(comment.find("//"));
+                                    bAddSpace = true;
+                                }
+
+                                if (bAddSpace)
+                                    write_line += ' ';
+                                write_line += comment;
+                            }
                         }
 
                         bWrittenOnce = true;
