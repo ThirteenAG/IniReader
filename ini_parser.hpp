@@ -1,6 +1,7 @@
 /*
  *  Copyright (c) 2013-2015 Denilson das Mercês Amorim <dma_2012@hotmail.com>
  *  Copyright (c) 2017 ThirteenAG
+ *  Copyright (c) 2023 Lovro Pleše (xan1242 / Tenjoin)
  *
  *  This software is provided 'as-is', without any express or implied
  *  warranty. In no event will the authors be held liable for any damages
@@ -37,6 +38,7 @@
 #include <vector>		// for std::vector
 #include <sstream>
 #include <fstream>
+#include <filesystem>
 
 namespace linb
 {
@@ -301,7 +303,7 @@ namespace linb
             return false;
         }
 
-        bool read_file(const char_type* filename)
+        bool read_file(std::filesystem::path filename)
         {
             std::ifstream file(filename, std::ios::in);
             if (file.is_open())
@@ -317,26 +319,29 @@ namespace linb
         /*
          *  Dumps the content of this container into an ini file
          */
-        bool write_file(const char_type* filename)
+        bool write_file(std::filesystem::path filename)
         {
-            FILE* f;
-            errno_t err;
-            if ((err = fopen_s(&f, filename, "w")) == 0)
+            std::ofstream file;
+            file.open(filename);
+            if (file.is_open())
             {
                 bool first = true;
                 for (auto& sec : this->data)
                 {
-                    fprintf(f, first ? "[%s]\n" : "\n[%s]\n", sec.first.c_str());
+                    if (!first)
+                        file << '\n';
+                    file << '[' << sec.first.c_str() << "]\n";
+
                     first = false;
                     for (auto& kv : sec.second)
                     {
                         if (kv.second.empty())
-                            fprintf(f, "%s\n", kv.first.c_str());
+                            file << kv.first.c_str() << '\n';
                         else
-                            fprintf(f, "%s = %s\n", kv.first.c_str(), kv.second.c_str());
+                            file << kv.first.c_str() << " = " << kv.second.c_str() << '\n';
                     }
                 }
-                fclose(f);
+                file.close();
                 return true;
             }
             return false;
@@ -345,17 +350,13 @@ namespace linb
 
         /*
         */
-        bool load_file(const char_type* filename)
+
+        bool load_file(std::stringstream& filename)
         {
             return read_file(filename);
         }
 
-        bool load_file(const StringType& filename)
-        {
-            return load_file(filename.c_str());
-        }
-
-        bool load_file(std::stringstream& filename)
+        bool load_file(std::filesystem::path filename)
         {
             return read_file(filename);
         }

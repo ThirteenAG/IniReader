@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 #include <Windows.h>
+#include <filesystem>
 
 /*
 *  String comparision functions, with case sensitive option
@@ -81,7 +82,101 @@ inline bool ends_with(const char* str, const char* prefix, bool case_sensitive)
 class CIniReader
 {
 private:
-    std::string m_szFileName;
+    std::filesystem::path m_szFileName;
+
+    // writes a key into the ini without losing other data around it
+    // only writes the first found instance
+    inline bool WriteIniString(std::string_view szSection, std::string_view szKey, std::string_view szValue)
+    {
+        if (!std::filesystem::exists(m_szFileName))
+        {
+            std::ofstream inifile;
+            inifile.open(m_szFileName);
+            if (!inifile.is_open())
+                return false;
+            inifile.close();
+        }
+
+        std::ifstream ifile;
+        ifile.open(m_szFileName);
+
+        if (!ifile.is_open())
+            return false;
+
+        // read entire ini to buffer which will be used as a reference
+        std::stringstream iniStream;
+        iniStream << ifile.rdbuf();
+        ifile.close();
+
+        // write back the ini to the file with modified contents
+        std::ofstream ofile;
+        ofile.open(m_szFileName, std::ios::binary);
+        if (!ofile.is_open())
+            return false;
+
+        std::string line;
+        std::string write_line;
+        bool bFirst = true;
+        bool bInSection = false;
+        bool bEnteredSectionOnce = false;
+        bool bWrittenOnce = false;
+        while (std::getline(iniStream, line))
+        {
+            if (line.empty())
+                continue;
+
+            write_line = line;
+            if (!bWrittenOnce)
+            {
+                if (line.front() == '[' && line.back() == ']')
+                {
+                    bFirst = false;
+                    if (line.find(szSection) != std::string::npos)
+                    {
+                        bInSection = true;
+                        bEnteredSectionOnce = true;
+                    }
+                    else
+                        bInSection = false;
+                }
+
+                if (bInSection)
+                {
+                    if (line.find(szKey) != std::string::npos)
+                    {
+                        write_line = line.substr(line.find(szKey), line.rfind('='));
+                        write_line += "=";
+                        write_line += szValue;
+
+                        bWrittenOnce = true;
+                    }
+                }
+                else if (bEnteredSectionOnce)
+                {
+                    ofile << szKey << "=" << szValue << "\r\n";
+                    bWrittenOnce = true;
+                }
+            }
+
+            ofile << write_line << "\r\n";
+            ofile.flush();
+        }
+
+        if (!bWrittenOnce)
+        {
+            if (!bEnteredSectionOnce)
+            {
+                if (!bFirst)
+                    ofile << "\r\n";
+                ofile << '[' << szSection << ']' << "\r\n";
+            }
+            ofile << szKey << "=" << szValue << "\r\n";
+        }
+
+        ofile.close();
+
+        return true;
+    }
 
 public:
     linb::ini data;
@@ -91,7 +186,7 @@ public:
         SetIniPath("");
     }
 
-    CIniReader(std::string_view szFileName)
+    CIniReader(std::filesystem::path szFileName)
     {
         SetIniPath(szFileName);
     }
@@ -146,7 +241,7 @@ public:
         return *this == ir;
     }
 
-    const std::string& GetIniPath()
+    const std::filesystem::path& GetIniPath()
     {
         return m_szFileName;
     }
@@ -156,25 +251,28 @@ public:
         SetIniPath("");
     }
 
-    void SetIniPath(std::string_view szFileName)
+    void SetIniPath(std::filesystem::path szFileName)
     {
-        char buffer[MAX_PATH];
+        //char buffer[MAX_PATH];
+        WCHAR buffer[MAX_PATH];
         HMODULE hm = NULL;
         GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&ends_with, &hm);
-        GetModuleFileNameA(hm, buffer, sizeof(buffer));
-        std::string modulePath = buffer;
+        GetModuleFileNameW(hm, buffer, ARRAYSIZE(buffer));
 
-        if (szFileName.find(':') != std::string_view::npos)
+        std::filesystem::path modulePath(buffer);
+        std::u8string strFileName = szFileName.u8string();
+
+        if (strFileName.find(':') != std::u8string::npos)
         {
             m_szFileName = szFileName;
         }
-        else if (szFileName.length() == 0)
+        else if (strFileName.length() == 0)
         {
-            m_szFileName = modulePath.substr(0, modulePath.find_last_of('.')) + ".ini";
+            m_szFileName = modulePath.replace_extension(".ini");
         }
         else
         {
-            m_szFileName = modulePath.substr(0, modulePath.rfind('\\') + 1) + szFileName.data();
+            m_szFileName = modulePath.u8string().substr(0, modulePath.u8string().rfind('\\') + 1) + strFileName.data();
         }
 
         data.load_file(m_szFileName);
@@ -231,7 +329,7 @@ public:
         {
             char szValue[255];
             _snprintf_s(szValue, 255, "%s%d", " ", iValue);
-            WritePrivateProfileStringA(szSection.data(), szKey.data(), szValue, m_szFileName.c_str());
+            WriteIniString(szSection, szKey, szValue);
         }
     }
 
@@ -246,7 +344,7 @@ public:
         {
             char szValue[255];
             _snprintf_s(szValue, 255, "%s%f", " ", fltValue);
-            WritePrivateProfileStringA(szSection.data(), szKey.data(), szValue, m_szFileName.c_str());
+            WriteIniString(szSection, szKey, szValue);
         }
     }
 
@@ -261,7 +359,7 @@ public:
         {
             char szValue[255];
             _snprintf_s(szValue, 255, "%s%s", " ", bolValue ? "True" : "False");
-            WritePrivateProfileStringA(szSection.data(), szKey.data(), szValue, m_szFileName.c_str());
+            WriteIniString(szSection, szKey, szValue);
         }
     }
 
@@ -274,7 +372,7 @@ public:
         }
         else
         {
-            WritePrivateProfileStringA(szSection.data(), szKey.data(), szValue.data(), m_szFileName.c_str());
+            WriteIniString(szSection, szKey, szValue);
         }
     }
 };
