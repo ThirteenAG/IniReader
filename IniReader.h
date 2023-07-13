@@ -86,7 +86,7 @@ private:
 
     // writes a key into the ini without losing other data around it
     // only writes the first found instance
-    inline bool WriteIniString(std::string_view szSection, std::string_view szKey, std::string_view szValue)
+    inline bool WriteIniString(std::string_view szSection, std::string_view szKey, std::string_view szValue, bool bKeepInlineData = false)
     {
         if (!std::filesystem::exists(m_szFileName))
         {
@@ -98,7 +98,7 @@ private:
         }
 
         std::ifstream ifile;
-        ifile.open(m_szFileName);
+        ifile.open(m_szFileName, std::ios::binary);
 
         if (!ifile.is_open())
             return false;
@@ -125,6 +125,9 @@ private:
             if (line.empty())
                 continue;
 
+            // trim any newline chars
+            line.erase(std::find_if(line.rbegin(), line.rend(), std::not_fn(std::function<int(int)>(::isspace))).base(), line.end());
+
             write_line = line;
             if (!bWrittenOnce)
             {
@@ -144,9 +147,57 @@ private:
                 {
                     if (line.find(szKey) != std::string::npos)
                     {
-                        write_line = line.substr(line.find(szKey), line.rfind('='));
+                        size_t pos;
+                        std::string clean_line = line;
+
+                        // Find comment and remove anything after it from the line
+                        if ((pos = clean_line.find_first_of(';')) != clean_line.npos)
+                            clean_line.erase(pos);
+
+                        if ((pos = clean_line.rfind("//")) != clean_line.npos)
+                            clean_line.erase(pos);
+
+                        clean_line.erase(std::find_if(clean_line.rbegin(), clean_line.rend(), std::not_fn(std::function<int(int)>(::isspace))).base(), clean_line.end());
+
+                        write_line = clean_line.substr(clean_line.find(szKey), clean_line.rfind('='));
                         write_line += "=";
                         write_line += szValue;
+
+                        if (bKeepInlineData)
+                        {
+                            std::string comment = line.substr(line.find('=') + 1);
+                            // after the equals sign we may have a space, so check for that and trim it
+                            comment.erase(comment.begin(), std::find_if(comment.begin(), comment.end(), std::not_fn(std::function<int(int)>(::isspace))));
+                            // check if there even is space after the value and add it if it's not there
+                            if (comment.at(1) != ' ')
+                            {
+                                if (comment.find(';') != std::string::npos)
+                                {
+                                    comment = comment.substr(comment.find(';'));
+                                    write_line += ' ';
+                                }
+                                else if (comment.find("//") != std::string::npos)
+                                {
+                                    comment = comment.substr(comment.find("//"));
+                                    write_line += ' ';
+                                }
+                            }
+                            else
+                            {
+                                // search for the first instance of a space and move it there
+                                pos = 0;
+                                for (char i : comment)
+                                {
+                                    if (isspace(i))
+                                        break;
+                                    pos++;
+                                }
+                                if (pos)
+                                    comment = comment.substr(pos);
+                            }
+
+                            write_line += comment;
+                        }
 
                         bWrittenOnce = true;
                     }
@@ -329,7 +380,7 @@ public:
         {
             char szValue[255];
             _snprintf_s(szValue, 255, "%s%d", " ", iValue);
-            WriteIniString(szSection, szKey, szValue);
+            WriteIniString(szSection, szKey, szValue, true);
         }
     }
 
@@ -344,7 +395,7 @@ public:
         {
             char szValue[255];
             _snprintf_s(szValue, 255, "%s%f", " ", fltValue);
-            WriteIniString(szSection, szKey, szValue);
+            WriteIniString(szSection, szKey, szValue, true);
         }
     }
 
@@ -359,7 +410,7 @@ public:
         {
             char szValue[255];
             _snprintf_s(szValue, 255, "%s%s", " ", bolValue ? "True" : "False");
-            WriteIniString(szSection, szKey, szValue);
+            WriteIniString(szSection, szKey, szValue, true);
         }
     }
 
