@@ -127,11 +127,11 @@ private:
 
             // trim any newline chars
             line.erase(std::find_if(line.rbegin(), line.rend(), std::not_fn(std::function<int(int)>(::isspace))).base(), line.end());
-
+            
             write_line = line;
             if (!bWrittenOnce)
             {
-                if (line.front() == '[' && line.back() == ']')
+                if (!line.empty() && line.front() == '[' && line.back() == ']')
                 {
                     bFirst = false;
                     if (line.find(szSection) != std::string::npos)
