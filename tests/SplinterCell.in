@@ -1,0 +1,290 @@
+[URL]
+Protocol=unreal
+ProtocolDescription=Unreal Protocol
+Name=Player
+Map=Index.scl
+LocalMap=menu\menu.scl
+MapExt=scl
+EXEName=SplinterCell.exe
+SaveExt=sav
+Port=7777
+Class=EchelonCharacter.ESam
+
+[FirstRun]
+FirstRun=829
+
+[Init]
+LogFlags=LNONE
+;LogFlags=LPLAYERCONTROLLER | LLEVEL2
+UseDIMouse=False
+
+[Engine.Engine]
+RenderDevice=D3DDrv.D3DRenderDevice
+GameRenderDevice=D3DDrv.D3DRenderDevice
+AudioDevice=DareAudio.DareAudioSubsystem
+Console=Engine.Console
+DefaultPlayerMenu=None
+EchelonPCConsole=EchelonMenus.EPCConsole
+Language=int
+GameEngine=Engine.GameEngine
+EditorEngine=Editor.EditorEngine
+WindowedRenderDevice=D3DDrv.D3DRenderDevice
+DefaultGame=Echelon.EchelonGameInfo
+DefaultServerGame=Engine.GameInfo
+ViewportManager=WinDrv.WindowsClient
+Render=Render.Render
+Input=Engine.Input
+Canvas=Echelon.ECanvas
+Editor3DRenderDevice=D3DDrv.D3DRenderDevice
+
+[Core.System]
+PurgeCacheDays=30
+SavePath=..\Save
+CachePath=..\Cache
+CacheExt=.uxx
+Paths=..\System\*.u
+Paths=..\Maps\*.scl
+Paths=..\Maps\prog\*.scl
+Paths=..\Textures\*.utx
+Paths=..\Textures\prog\*.utx
+Paths=..\Sounds\*.uax
+Paths=..\Sounds\prog\*.uax
+Paths=..\Music\*.umx
+Paths=..\StaticMeshes\*.usx
+Paths=..\StaticMeshes\prog\*.usx
+Paths=..\Animations\*.ukx
+Suppress=DevLoad
+Suppress=DevSave
+Suppress=DevNetTraffic
+Suppress=DevGarbage
+Suppress=DevKill
+Suppress=DevReplace
+Suppress=DevCompile
+Suppress=DevBind
+Suppress=DevBsp
+
+[Engine.GameEngine]
+CacheSizeMegs=4
+UseSound=true
+
+[WinDrv.WindowsClient]
+TextureDetail=High
+SkinDetail=High
+Brightness=0.500000
+Contrast=0.500000
+Gamma=1.000000
+MipFactor=1.000000
+UseJoystick=True
+CaptureMouse=True
+StartupFullscreen=True
+ScreenFlashes=True
+NoLighting=False
+DeadZoneXYZ=True
+DeadZoneRUV=False
+InvertVertical=False
+ScaleXYZ=1.000000
+ScaleRUV=1.000000
+MinDesiredFrameRate=10.000000
+Decals=True
+NoDynamicLights=False
+SkinDetail=High
+TextureDetail=High
+NoFractalAnim=False
+Decals=False
+
+[D3DDrv.D3DRenderDevice]
+ForceShadowMode=1
+FullScreenVideo=True
+Translucency=True
+VolumetricLighting=False
+ShinySurfaces=True
+HighDetailActors=True
+UsePrecaching=True
+UseMipmapping=True
+UseTrilinear=True
+UseMultitexture=True
+UsePageFlipping=True
+UseFullscreen=False
+UseGammaCorrection=True
+DetailTextures=False
+UseTripleBuffering=True
+UsePrecache=True
+Use32BitTextures=False
+HardwareSkinning=False
+AdapterNumber=-1
+ReduceMouseLag=False
+UseTripleBuffering=False
+; ForceShadowMode flag : 0==projector, 1==buffer, unspecified==auto-detect
+;ForceShadowMode=0
+ForceShadowMode=1
+FullScreenVideo=True
+EmulateGF2Mode=0
+FullScreenVideo=True
+
+[Editor.EditorEngine]
+UseSound=true
+CacheSizeMegs=6
+GridEnabled=True
+SnapVertices=False
+SnapDistance=10.000000
+GridSize=(X=16.000000,Y=16.000000,Z=16.000000)
+RotGridEnabled=True
+RotGridSize=(Pitch=1024,Yaw=1024,Roll=1024)
+GameCommandLine=-log
+FovAngleDegrees=90.000000
+GodMode=True
+AutoSave=True
+AutoSaveTimeMinutes=5
+AutoSaveIndex=4
+UseAxisIndicator=True
+MatineeCurveDetail=0.100000
+UseSizingBox=True
+UseTagDisplay=True
+AlwaysShowTerrain=False
+UseActorRotationGizmo=False
+AudioDevice=None
+Console=Class'Engine.Console'
+DefaultMenu=None
+DefaultPlayerMenu=None
+NetworkDevice=None
+Language=None
+C_WorldBox=(B=107,G=0,R=0,A=255)
+C_GroundPlane=(B=63,G=0,R=0,A=255)
+C_GroundHighlight=(B=127,G=0,R=0,A=255)
+C_BrushWire=(B=63,G=63,R=255,A=255)
+C_Pivot=(B=0,G=255,R=0,A=255)
+C_Select=(B=127,G=0,R=0,A=255)
+C_Current=(B=0,G=0,R=0,A=255)
+C_AddWire=(B=255,G=127,R=127,A=255)
+C_SubtractWire=(B=63,G=192,R=255,A=255)
+C_GreyWire=(B=163,G=163,R=163,A=255)
+C_BrushVertex=(B=0,G=0,R=0,A=255)
+C_BrushSnap=(B=0,G=0,R=0,A=255)
+C_Invalid=(B=163,G=163,R=163,A=255)
+C_ActorWire=(B=0,G=63,R=127,A=255)
+C_ActorHiWire=(B=0,G=127,R=255,A=255)
+C_Black=(B=0,G=0,R=0,A=255)
+C_White=(B=255,G=255,R=255,A=255)
+C_Mask=(B=0,G=0,R=0,A=255)
+C_SemiSolidWire=(B=0,G=255,R=127,A=255)
+C_NonSolidWire=(B=32,G=192,R=63,A=255)
+C_WireBackground=(B=0,G=0,R=0,A=255)
+C_WireGridAxis=(B=119,G=119,R=119,A=255)
+C_ActorArrow=(B=0,G=0,R=163,A=255)
+C_ScaleBox=(B=11,G=67,R=151,A=255)
+C_ScaleBoxHi=(B=157,G=149,R=223,A=255)
+C_ZoneWire=(B=0,G=0,R=0,A=255)
+C_Mover=(B=128,G=0,R=128,A=255)
+C_OrthoBackground=(B=163,G=163,R=163,A=255)
+C_StaticMesh=(B=127,G=127,R=0,A=255)
+C_ConstraintLine=(B=0,G=255,R=0,A=255)
+C_AnimMesh=(B=28,G=221,R=221,A=255)
+ShowNavMarkers=True
+C_Volume=(B=225,G=196,R=255,A=255)
+C_BlockingVolume=(B=150,G=70,R=150,A=255)
+EditPackages=Core
+EditPackages=Engine
+EditPackages=Editor
+EditPackages=EchelonEffect
+EditPackages=Echelon
+EditPackages=EchelonGameObject
+EditPackages=EchelonIngredient
+EditPackages=EchelonCharacter
+EditPackages=EchelonHUD
+EditPackages=EchelonPattern
+EditPackages=UWindow
+EditPackages=UDebugMenu
+EditPackages=EchelonMenus
+
+[UMenu.UnrealConsole]
+RootWindow=UMenu.UMenuRootWindow
+UWindowKey=IK_Esc
+ShowDesktop=True
+
+[UMenu.UMenuMenuBar]
+ShowHelp=True
+GameUMenuDefault=UTMenu.UTGameMenu
+MultiplayerUMenuDefault=UTMenu.UTMultiplayerMenu
+OptionsUMenuDefault=UTMenu.UTOptionsMenu
+
+[Engine.GameInfo]
+VisFullyThreshold=120.000000
+VisMostlyThreshold=78.000000
+VisPartiallyThreshold=42.000000
+VisBarelyThreshold=15.000000
+VisSpeedGain=10.000000
+VisCrouchMul=0.90000
+VisBackToWallMul=0.90000
+UseRumble=False
+
+[Engine.Console]
+ConsoleKey=113
+
+[WindowPositions]
+Material Properties=(X=-341,Y=-139,XL=692,YL=606)
+VFToolbar=(X=3,Y=3,XL=418,YL=24)
+PictureButton=(X=692,Y=8,XL=22,YL=20)
+Surface Properties=(X=-5,Y=-43,XL=437,YL=267)
+WPropertyPage=(X=0,Y=0,XL=336,YL=348)
+Terrain Editing=(X=-5,Y=-43,XL=577,YL=426)
+SubTools=(X=15,Y=200,XL=542,YL=211)
+Matinee=(X=-5,Y=-43,XL=394,YL=426)
+Build Options=(X=-5,Y=-43,XL=368,YL=412)
+BottomBar=(X=0,Y=0,XL=1212,YL=36)
+BottomBarStandard=(X=74,Y=963,XL=719,YL=35)
+TopBar=(X=0,Y=0,XL=1280,YL=32)
+ThinScrollBar=(X=64,Y=0,XL=4,YL=924)
+EditorToolbar=(X=0,Y=0,XL=68,YL=924)
+Sound Browser=(X=4,Y=32,XL=843,YL=608)
+Music Browser=(X=4,Y=32,XL=843,YL=608)
+Group Browser=(X=4,Y=32,XL=843,YL=608)
+New Material=(X=-296,Y=-92,XL=594,YL=449)
+Master Browser=(X=-5,Y=-43,XL=861,YL=692)
+Texture Browser=(X=9,Y=75,XL=843,YL=608)
+Static Mesh Browser=(X=9,Y=75,XL=843,YL=608)
+Actor Browser=(X=9,Y=75,XL=843,YL=608)
+Prefab Browser=(X=9,Y=75,XL=843,YL=608)
+InAnimWindowProperties=(X=632,Y=100,XL=204,YL=520)
+Animation Browser=(X=9,Y=75,XL=843,YL=608)
+Mesh Browser=(X=9,Y=75,XL=843,YL=608)
+Load Errors=(X=389,Y=275,XL=491,YL=358)
+Check Map=(X=389,Y=280,XL=491,YL=348)
+Scale Lights=(X=489,Y=403,XL=291,YL=102)
+Progress=(X=454,Y=411,XL=362,YL=85)
+Search for Actors=(X=382,Y=314,XL=506,YL=280)
+Replace Textures=(X=373,Y=293,XL=524,YL=322)
+Find/Replace=(X=361,Y=248,XL=458,YL=193)
+CodeFrame=(X=40,Y=66,XL=811,YL=738)
+EditorLog=(X=95,Y=57,XL=450,YL=450)
+MdiFrameBottom=(X=73,Y=963,XL=1212,YL=36)
+MdiFrameLeft=(X=5,Y=75,XL=68,YL=924)
+MdiFrameTop=(X=5,Y=43,XL=1280,YL=32)
+Brush Builder=(X=23,Y=35,XL=345,YL=280)
+ActorProperties=(X=671,Y=41,XL=546,YL=929)
+Viewport Config=(X=632,Y=472,XL=335,YL=126)
+GameLog=(X=165,Y=304,XL=969,YL=659)
+Import Texture=(X=-462,Y=-245,XL=366,YL=249)
+Import Static Mesh=(X=-160,Y=42,XL=366,YL=153)
+ActorProperties.Split=196
+Patrol Tool=(X=-5,Y=-43,XL=319,YL=534)
+CrashBox=(X=369,Y=375,XL=542,YL=274)
+LevelProperties=(X=266,Y=101,XL=526,YL=484)
+New Notify=(X=-4,Y=-32,XL=522,YL=191)
+New Mesh/Animation=(X=-4,Y=-32,XL=366,YL=288)
+EditActor=(X=956,Y=168,XL=640,YL=931)
+Add Special=(X=478,Y=366,XL=324,YL=181)
+PatternED=(X=77,Y=-10,XL=1097,YL=860)
+Convert=(X=0,Y=0,XL=285,YL=179)
+
+[UDebugMenu.UDebugMapListCW]
+LastGameType=Engine.GameInfo
+
+[EchelonMenus.EPCConsole]
+RootWindow=EchelonMenus.EPCMainMenuRootWindow
+;RootWindow=UDebugMenu.UDebugRootWindow
+StartMenus=true
+HideMenusAtStart=false
+
+[EchelonMenus.EPCMainMenuRootWindow]
+TitleFont=0
+

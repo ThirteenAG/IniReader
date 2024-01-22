@@ -1,255 +1,22 @@
 #ifndef INIREADER_H
 #define INIREADER_H
-#include "ini_parser.hpp"
-#include <string>
-#include <string_view>
+
+#define MINI_CASE_SENSITIVE
+#include "mINI\src\mini\ini.h"
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <filesystem>
-
-/*
-*  String comparision functions, with case sensitive option
-*/
-
-using std::strcmp;
-
-inline int strcmp(const char* str1, const char* str2, bool csensitive)
-{
-    return (csensitive ? ::strcmp(str1, str2) : ::_stricmp(str1, str2));
-}
-
-inline int strcmp(const char* str1, const char* str2, size_t num, bool csensitive)
-{
-    return (csensitive ? ::strncmp(str1, str2, num) : ::_strnicmp(str1, str2, num));
-}
-
-inline int compare(const std::string& str1, const std::string& str2, bool case_sensitive)
-{
-    if (str1.length() == str2.length())
-        return strcmp(str1.c_str(), str2.c_str(), case_sensitive);
-    return (str1.length() < str2.length() ? -1 : 1);
-}
-
-inline int compare(const std::string& str1, const std::string& str2, size_t num, bool case_sensitive)
-{
-    if (str1.length() == str2.length())
-        return strcmp(str1.c_str(), str2.c_str(), num, case_sensitive);
-    return (str1.length() < str2.length() ? -1 : 1);
-}
-
-inline int compare(const char* str1, const char* str2, bool case_sensitive)
-{
-    return strcmp(str1, str2, case_sensitive);
-}
-
-inline int compare(const char* str1, const char* str2, size_t num, bool case_sensitive)
-{
-    return strcmp(str1, str2, num, case_sensitive);
-}
-
-inline bool starts_with(const char* str, const char* prefix, bool case_sensitive)
-{
-    while (*prefix)
-    {
-        bool equal;
-        if (case_sensitive)
-            equal = (*str++ == *prefix++);
-        else
-            equal = (::tolower(*str++) == ::tolower(*prefix++));
-
-        if (!equal) return false;
-    }
-    return true;
-}
-
-inline bool ends_with(const char* str, const char* prefix, bool case_sensitive)
-{
-    auto str2 = &str[strlen(str) - 1];
-    auto prefix2 = &prefix[strlen(prefix) - 1];
-
-    while (prefix2 >= prefix)
-    {
-        bool equal;
-        if (case_sensitive)
-            equal = (*str2-- == *prefix2--);
-        else
-            equal = (::tolower(*str2--) == ::tolower(*prefix2--));
-
-        if (!equal) return false;
-    }
-    return true;
-}
 
 class CIniReader
 {
 private:
     std::filesystem::path m_szFileName;
-
-    // writes a key into the ini without losing other data around it
-    // only writes the first found instance
-    inline bool WriteIniString(std::string_view szSection, std::string_view szKey, std::string_view szValue, bool bKeepInlineData = false)
-    {
-        if (!std::filesystem::exists(m_szFileName))
-        {
-            std::ofstream inifile;
-            inifile.open(m_szFileName);
-            if (!inifile.is_open())
-                return false;
-            inifile.close();
-        }
-
-        std::ifstream ifile;
-        ifile.open(m_szFileName, std::ios::binary);
-
-        if (!ifile.is_open())
-            return false;
-
-        // read entire ini to buffer which will be used as a reference
-        std::stringstream iniStream;
-        iniStream << ifile.rdbuf();
-        ifile.close();
-
-        // write back the ini to the file with modified contents
-        std::ofstream ofile;
-        ofile.open(m_szFileName, std::ios::binary);
-        if (!ofile.is_open())
-            return false;
-
-        std::string line;
-        std::string write_line;
-        bool bFirst = true;
-        bool bInSection = false;
-        bool bEnteredSectionOnce = false;
-        bool bWrittenOnce = false;
-        while (std::getline(iniStream, line))
-        {
-            if (line.empty())
-                continue;
-
-            // trim any newline chars
-            line.erase(std::find_if(line.rbegin(), line.rend(), std::not_fn(std::function<int(int)>(::isspace))).base(), line.end());
-            
-            write_line = line;
-            if (!bWrittenOnce)
-            {
-                if (!line.empty() && line.front() == '[' && line.back() == ']')
-                {
-                    bFirst = false;
-                    if (line.find(szSection) != std::string::npos)
-                    {
-                        bInSection = true;
-                        bEnteredSectionOnce = true;
-                    }
-                    else
-                        bInSection = false;
-                }
-
-                if (bInSection)
-                {
-                    if (line.find(szKey) != std::string::npos)
-                    {
-                        size_t pos;
-                        std::string clean_line = line;
-
-                        // Find comment and remove anything after it from the line
-                        if ((pos = clean_line.find_first_of(';')) != clean_line.npos)
-                            clean_line.erase(pos);
-
-                        if ((pos = clean_line.rfind("//")) != clean_line.npos)
-                            clean_line.erase(pos);
-
-                        clean_line.erase(std::find_if(clean_line.rbegin(), clean_line.rend(), std::not_fn(std::function<int(int)>(::isspace))).base(), clean_line.end());
-
-                        write_line = clean_line.substr(clean_line.find(szKey), clean_line.rfind('='));
-                        write_line += "=";
-                        write_line += szValue;
-
-                        if (bKeepInlineData)
-                        {
-                            bool bAddSpace = false;
-                            std::string comment = line.substr(line.find('=') + 1);
-                            // after the equals sign we may have a space, so check for that and trim it
-                            comment.erase(comment.begin(), std::find_if(comment.begin(), comment.end(), std::not_fn(std::function<int(int)>(::isspace))));
-                            // check if there even is a comment
-                            if ((comment.find(';') != std::string::npos) || (comment.find("//") != std::string::npos))
-                            {
-                                // search for the first instance of a space and move it there
-                                pos = 0;
-                                for (char i : comment)
-                                {
-                                    if (isspace(i))
-                                        break;
-                                    pos++;
-                                }
-                                if (pos)
-                                {
-                                    // move back if we overshoot
-                                    size_t backpos = 0;
-                                    if ((backpos = comment.rfind(';', pos)) != std::string::npos)
-                                    {
-                                        pos = backpos;
-                                        bAddSpace = true;
-                                    }
-                                    else if ((backpos = comment.rfind("//", pos)) != std::string::npos)
-                                    {
-                                        pos = backpos;
-                                        bAddSpace = true;
-                                    }
-
-                                    comment = comment.substr(pos);
-                                }
-                                else if (comment.find(';') != std::string::npos)
-                                {
-                                    comment = comment.substr(comment.find(';'));
-                                    bAddSpace = true;
-                                }
-                                else if (comment.find("//") != std::string::npos)
-                                {
-                                    comment = comment.substr(comment.find("//"));
-                                    bAddSpace = true;
-                                }
-
-                                if (bAddSpace)
-                                    write_line += ' ';
-                                write_line += comment;
-                            }
-                        }
-
-                        bWrittenOnce = true;
-                    }
-                }
-                else if (bEnteredSectionOnce)
-                {
-                    ofile << szKey << "=" << szValue << "\r\n";
-                    bWrittenOnce = true;
-                }
-            }
-
-            ofile << write_line << "\r\n";
-            ofile.flush();
-        }
-
-        if (!bWrittenOnce)
-        {
-            if (!bEnteredSectionOnce)
-            {
-                if (!bFirst)
-                    ofile << "\r\n";
-                ofile << '[' << szSection << ']' << "\r\n";
-            }
-            ofile << szKey << "=" << szValue << "\r\n";
-        }
-
-        ofile.close();
-
-        return true;
-    }
+    mINI::INIStructure m_ini;
 
 public:
-    linb::ini data;
-
     CIniReader()
     {
-        SetIniPath("");
+        SetIniPath();
     }
 
     CIniReader(std::filesystem::path szFileName)
@@ -257,25 +24,27 @@ public:
         SetIniPath(szFileName);
     }
 
-    CIniReader(std::stringstream& ini_mem)
-    {
-        data.load_file(ini_mem);
-    }
-
     bool operator==(CIniReader& ir)
     {
-        if (data.size() != ir.data.size())
-            return false;
-
-        for (auto& section : data)
+        auto& a = m_ini;
+        auto& b = ir.m_ini;
+        for (auto const& it : a)
         {
-            for (auto& key : data.at(section.first))
+            auto const& section = std::get<0>(it);
+            auto const& collection = std::get<1>(it);
+            if (collection.size() != b[section].size()) {
+                return false;
+            }
+            for (auto const& it2 : collection)
             {
-                if (key.second != ir.data.at(section.first)[key.first])
+                auto const& key = std::get<0>(it2);
+                auto const& value = std::get<1>(it2);
+                if (value != b[section][key]) {
                     return false;
+                }
             }
         }
-        return true;
+        return a.size() == b.size();
     }
 
     bool operator!=(CIniReader& ir)
@@ -285,21 +54,16 @@ public:
 
     bool CompareBySections(CIniReader& ir)
     {
-        if (data.size() != ir.data.size())
-            return false;
+        std::vector<std::string> sections1;
+        std::vector<std::string> sections2;
 
-        for (auto& section : data)
-        {
-            if (ir.data.find(section.first) == ir.data.end())
-                return false;
+        for (auto const& it : m_ini)
+            sections1.emplace_back(std::get<0>(it));
 
-            if (section.second.size() != ir.data.find(section.first)->second.size())
-                return false;
+        for (auto const& it : ir.m_ini)
+            sections2.emplace_back(std::get<0>(it));
 
-            if (section.first != ir.data.find(section.first)->first)
-                return false;
-        }
-        return true;
+        return std::equal(sections1.begin(), sections1.end(), sections2.begin(), sections2.end());
     }
 
     bool CompareByValues(CIniReader& ir)
@@ -312,6 +76,11 @@ public:
         return m_szFileName;
     }
 
+    void SetNewIniPathForSave(std::filesystem::path szFileName)
+    {
+        m_szFileName = szFileName;
+    }
+
     void SetIniPath()
     {
         SetIniPath("");
@@ -319,127 +88,159 @@ public:
 
     void SetIniPath(std::filesystem::path szFileName)
     {
-        //char buffer[MAX_PATH];
+        static const auto lpModuleName = 1;
         WCHAR buffer[MAX_PATH];
         HMODULE hm = NULL;
-        GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&ends_with, &hm);
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&lpModuleName, &hm);
         GetModuleFileNameW(hm, buffer, ARRAYSIZE(buffer));
-
         std::filesystem::path modulePath(buffer);
-        std::u8string strFileName = szFileName.u8string();
 
-        if (strFileName.find(':') != std::u8string::npos)
+        if (szFileName.is_absolute())
         {
             m_szFileName = szFileName;
         }
-        else if (strFileName.length() == 0)
+        else if (szFileName.empty())
         {
             m_szFileName = modulePath.replace_extension(".ini");
         }
         else
         {
-            m_szFileName = modulePath.u8string().substr(0, modulePath.u8string().rfind('\\') + 1) + strFileName.data();
+            m_szFileName = modulePath.parent_path() / szFileName;
         }
 
-        data.load_file(m_szFileName);
+        mINI::INIFile file(m_szFileName);
+        file.read(m_ini);
     }
 
     int ReadInteger(std::string_view szSection, std::string_view szKey, int iDefaultValue)
     {
-        auto str = data.get(szSection.data(), szKey.data(), std::to_string(iDefaultValue));
-        return std::stoi(str, nullptr, starts_with(str.c_str(), "0x", false) ? 16 : 10);
+        try
+        {
+            if (m_ini.has(szSection.data()))
+            {
+                auto& collection = m_ini[szSection.data()];
+                if (collection.has(szKey.data()))
+                {
+                    auto& value = collection[szKey.data()];
+                    return std::stoi(value, nullptr, (value.starts_with("0x") || value.starts_with("0X")) ? 16 : 10);
+                }
+            }
+        }
+        catch (...) {}
+        return iDefaultValue;
     }
 
     float ReadFloat(std::string_view szSection, std::string_view szKey, float fltDefaultValue)
     {
-        return (float)atof(data.get(szSection.data(), szKey.data(), std::to_string(fltDefaultValue)).c_str());
+        try
+        {
+            if (m_ini.has(szSection.data()))
+            {
+                auto& collection = m_ini[szSection.data()];
+                if (collection.has(szKey.data()))
+                {
+                    auto& value = collection[szKey.data()];
+                    return static_cast<float>(std::atof(value.data()));
+                }
+            }
+        }
+        catch (...) {}
+        return fltDefaultValue;
     }
-
+    
     bool ReadBoolean(std::string_view szSection, std::string_view szKey, bool bolDefaultValue)
     {
-        auto val = data.get(szSection.data(), szKey.data(), "");
-        if (!val.empty())
+        try
         {
-            if (val.size() == 1)
-                return val.front() != '0';
-            else
-                return compare(val, "false", false);
+            if (m_ini.has(szSection.data()))
+            {
+                auto& collection = m_ini[szSection.data()];
+                if (collection.has(szKey.data()))
+                {
+                    auto value = collection[szKey.data()];
+                    if (value.size() == 1)
+                        return value != "0";
+                    else {
+                        std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+                        if (value == "false")
+                            return false;
+                        else if (value == "true")
+                            return true;
+                    }
+                }
+            }
         }
+        catch (...) {}
         return bolDefaultValue;
     }
-
+    
     std::string ReadString(std::string_view szSection, std::string_view szKey, std::string_view szDefaultValue)
     {
-        auto s = data.get(szSection.data(), szKey.data(), szDefaultValue.data());
-
-        if (!s.empty())
+        try
         {
-            if (s.at(0) == '\"' || s.at(0) == '\'')
-                s.erase(0, 1);
-
-            if (s.at(s.size() - 1) == '\"' || s.at(s.size() - 1) == '\'')
-                s.erase(s.size() - 1);
+            if (m_ini.has(szSection.data()))
+            {
+                auto& collection = m_ini[szSection.data()];
+                if (collection.has(szKey.data()))
+                {
+                    auto value = collection[szKey.data()];
+                    if (!value.empty())
+                    {
+                        if (value.at(0) == '\"' || value.at(0) == '\'')
+                            value.erase(0, 1);
+                        if (value.at(value.size() - 1) == '\"' || value.at(value.size() - 1) == '\'')
+                            value.erase(value.size() - 1);
+                    }
+                    return value;
+                }
+            }
         }
-
-        return s;
+        catch (...) {}
+        return szDefaultValue.data();
     }
-
-    void WriteInteger(std::string_view szSection, std::string_view szKey, int iValue, bool useparser = false)
+    
+    void WriteInteger(std::string_view szSection, std::string_view szKey, int iValue, bool pretty = false)
     {
-        if (useparser)
+        try
         {
-            data.set(szSection.data(), szKey.data(), std::to_string(iValue));
-            data.write_file(m_szFileName);
+            mINI::INIFile file(m_szFileName);
+            m_ini[szSection.data()][szKey.data()] = std::to_string(iValue);
+            file.write(m_ini, pretty);
         }
-        else
-        {
-            char szValue[255];
-            _snprintf_s(szValue, 255, "%s%d", " ", iValue);
-            WriteIniString(szSection, szKey, szValue, true);
-        }
+        catch (...) {}
     }
-
-    void WriteFloat(std::string_view szSection, std::string_view szKey, float fltValue, bool useparser = false)
+    
+    void WriteFloat(std::string_view szSection, std::string_view szKey, float fltValue, bool pretty = false)
     {
-        if (useparser)
+        try
         {
-            data.set(szSection.data(), szKey.data(), std::to_string(fltValue));
-            data.write_file(m_szFileName);
+            mINI::INIFile file(m_szFileName);
+            m_ini[szSection.data()][szKey.data()] = std::to_string(fltValue);
+            file.write(m_ini, pretty);
         }
-        else
-        {
-            char szValue[255];
-            _snprintf_s(szValue, 255, "%s%f", " ", fltValue);
-            WriteIniString(szSection, szKey, szValue, true);
-        }
+        catch (...) {}
     }
-
-    void WriteBoolean(std::string_view szSection, std::string_view szKey, bool bolValue, bool useparser = false)
+    
+    void WriteBoolean(std::string_view szSection, std::string_view szKey, bool bolValue, bool pretty = false)
     {
-        if (useparser)
+        try
         {
-            data.set(szSection.data(), szKey.data(), std::to_string(bolValue));
-            data.write_file(m_szFileName);
+            mINI::INIFile file(m_szFileName);
+            m_ini[szSection.data()][szKey.data()] = bolValue ? "True" : "False";
+            file.write(m_ini, pretty);
         }
-        else
-        {
-            char szValue[255];
-            _snprintf_s(szValue, 255, "%s%s", " ", bolValue ? "True" : "False");
-            WriteIniString(szSection, szKey, szValue, true);
-        }
+        catch (...) {}
     }
-
-    void WriteString(std::string_view szSection, std::string_view szKey, std::string_view szValue, bool useparser = false)
+    
+    void WriteString(std::string_view szSection, std::string_view szKey, std::string_view szValue, bool pretty = false)
     {
-        if (useparser)
+        try
         {
-            data.set(szSection.data(), szKey.data(), szValue.data());
-            data.write_file(m_szFileName);
+            mINI::INIFile file(m_szFileName);
+            m_ini[szSection.data()][szKey.data()] = szValue.data();
+            file.write(m_ini, pretty);
         }
-        else
-        {
-            WriteIniString(szSection, szKey, szValue);
-        }
+        catch (...) {}
     }
 };
 
