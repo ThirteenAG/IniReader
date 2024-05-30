@@ -116,7 +116,7 @@ public:
     {
         try
         {
-            if (m_ini.has(szSection.data()))
+            if (m_ini.size() && m_ini.has(szSection.data()))
             {
                 auto& collection = m_ini[szSection.data()];
                 if (collection.has(szKey.data()))
@@ -134,7 +134,7 @@ public:
     {
         try
         {
-            if (m_ini.has(szSection.data()))
+            if (m_ini.size() && m_ini.has(szSection.data()))
             {
                 auto& collection = m_ini[szSection.data()];
                 if (collection.has(szKey.data()))
@@ -152,7 +152,7 @@ public:
     {
         try
         {
-            if (m_ini.has(szSection.data()))
+            if (m_ini.size() && m_ini.has(szSection.data()))
             {
                 auto& collection = m_ini[szSection.data()];
                 if (collection.has(szKey.data()))
@@ -178,7 +178,7 @@ public:
     {
         try
         {
-            if (m_ini.has(szSection.data()))
+            if (m_ini.size() && m_ini.has(szSection.data()))
             {
                 auto& collection = m_ini[szSection.data()];
                 if (collection.has(szKey.data()))
@@ -196,7 +196,7 @@ public:
             }
         }
         catch (...) {}
-        return szDefaultValue.data();
+        return std::string(szDefaultValue);
     }
     
     void WriteInteger(std::string_view szSection, std::string_view szKey, int iValue, bool pretty = false)
