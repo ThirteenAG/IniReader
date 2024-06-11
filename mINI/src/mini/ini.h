@@ -320,13 +320,17 @@ namespace mINI
 
         inline size_t getCommentAt(std::string_view line)
         {
-            auto commentAt = line.find_first_of(';');
+            auto commentAt = line.find_last_of(';');
             if (commentAt == std::string::npos)
             {
-                commentAt = line.find("//");
+                commentAt = line.rfind("//");
                 if (commentAt == std::string::npos)
-                    commentAt = line.find_first_of('#');
+                    commentAt = line.find_last_of('#');
             }
+
+            if (commentAt != std::string::npos && line.at(commentAt - 1) != ' ')
+                commentAt = std::string::npos;
+
             return commentAt;
         }
 
@@ -374,7 +378,7 @@ namespace mINI
                 auto value = line.substr(equalsAt + 1);
                 auto comment = std::string();
                 auto commentAt = getCommentAt(line);
-                if (commentAt != std::string::npos) {
+                if (commentAt != std::string::npos && commentAt > equalsAt) {
                     value = line.substr(0, commentAt);
                     value = value.substr(equalsAt + 1);
                     comment = line.substr(commentAt);
@@ -668,7 +672,7 @@ namespace mINI
 
                                     if (!outputComment.empty() && outputComment.front() == ' ')
                                     {
-                                        int i = outputValue.size() - value.size();
+                                        std::ptrdiff_t i = outputValue.size() - value.size();
                                         if (i < 0)
                                         {
                                             while (i < 0) {
