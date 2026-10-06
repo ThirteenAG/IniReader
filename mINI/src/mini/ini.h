@@ -163,15 +163,11 @@ namespace mINI
 
         INIMap& operator=(INIMap const& other)
         {
-            std::size_t data_size = other.data.size();
-            for (std::size_t i = 0; i < data_size; ++i)
+            if (this != &other)
             {
-                auto const& key = std::get<0>(other.data[i]);
-                auto const& obj = std::get<1>(other.data[i]);
-                auto const& com = std::get<2>(other.data[i]);
-                data.emplace_back(key, obj, com);
+                data = other.data;
+                dataIndexMap = other.dataIndexMap;
             }
-            dataIndexMap = T_DataIndexMap(other.dataIndexMap);
             return *this;
         }
 
@@ -530,29 +526,79 @@ namespace mINI
         }
     };
 
+    namespace INIFileUtil
+    {
+        // Writes the whole file to a temporary file next to it first and then replaces the original,
+        // so an interrupted write can't leave a truncated or half-written ini behind.
+        inline bool writeFile(std::filesystem::path const& filename, std::string const& contents)
+        {
+            std::error_code ec;
+            auto target = filename;
+            if (std::filesystem::is_symlink(target, ec))
+            {
+                auto resolved = std::filesystem::canonical(target, ec);
+                if (!ec)
+                {
+                    target = resolved;
+                }
+            }
+            auto temp = target;
+            temp += ".tmp";
+            {
+                std::ofstream tempStream(temp, std::ios::out | std::ios::binary | std::ios::trunc);
+                if (tempStream.is_open())
+                {
+                    tempStream.write(contents.data(), contents.size());
+                    tempStream.close();
+                    if (tempStream)
+                    {
+                        std::filesystem::rename(temp, target, ec);
+                        if (!ec)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            std::filesystem::remove(temp, ec);
+            // Fall back to writing in place (e.g. directory isn't writable but the file is)
+            std::ofstream fileWriteStream(target, std::ios::out | std::ios::binary | std::ios::trunc);
+            if (!fileWriteStream.is_open())
+            {
+                return false;
+            }
+            fileWriteStream.write(contents.data(), contents.size());
+            return static_cast<bool>(fileWriteStream);
+        }
+    }
+
     class INIGenerator
     {
     private:
-        std::ofstream fileWriteStream;
+        std::filesystem::path filename;
 
     public:
         bool prettyPrint = false;
 
         INIGenerator(std::filesystem::path const& filename)
+        : filename(filename)
         {
-            fileWriteStream.open(filename, std::ios::out | std::ios::binary);
         }
         ~INIGenerator() { }
 
         bool operator<<(INIStructure const& data)
         {
-            if (!fileWriteStream.is_open())
-            {
-                return false;
-            }
+            std::ostringstream fileWriteStream;
+            write(fileWriteStream, data);
+            return INIFileUtil::writeFile(filename, fileWriteStream.str());
+        }
+
+    private:
+        void write(std::ostringstream& fileWriteStream, INIStructure const& data)
+        {
             if (!data.size())
             {
-                return true;
+                return;
             }
             auto it = data.begin();
             for (;;)
@@ -596,7 +642,6 @@ namespace mINI
                     fileWriteStream << INIStringUtil::endl;
                 }
             }
-            return true;
         }
     };
 
@@ -800,7 +845,12 @@ namespace mINI
         bool operator<<(INIStructure& data)
         {
             std::error_code ec;
-            if (!std::filesystem::exists(filename, ec))
+            bool fileExists = std::filesystem::exists(filename, ec);
+            if (ec)
+            {
+                return false;
+            }
+            if (!fileExists)
             {
                 INIGenerator generator(filename);
                 generator.prettyPrint = prettyPrint;
@@ -823,33 +873,29 @@ namespace mINI
                 return false;
             }
             T_LineData output = getLazyOutput(lineData, data, originalData);
-            std::ofstream fileWriteStream(filename, std::ios::out | std::ios::binary);
-            if (fileWriteStream.is_open())
-            {
-                if (fileIsBOM) {
-                    const char utf8_BOM[3] = {
-                        static_cast<char>(0xEF),
-                        static_cast<char>(0xBB),
-                        static_cast<char>(0xBF)
-                    };
-                    fileWriteStream.write(utf8_BOM, 3);
-                }
-                if (output.size())
-                {
-                    auto line = output.begin();
-                    for (;;)
-                    {
-                        fileWriteStream << *line;
-                        if (++line == output.end())
-                        {
-                            break;
-                        }
-                        fileWriteStream << INIStringUtil::endl;
-                    }
-                }
-                return true;
+            std::ostringstream fileWriteStream;
+            if (fileIsBOM) {
+                const char utf8_BOM[3] = {
+                    static_cast<char>(0xEF),
+                    static_cast<char>(0xBB),
+                    static_cast<char>(0xBF)
+                };
+                fileWriteStream.write(utf8_BOM, 3);
             }
-            return false;
+            if (output.size())
+            {
+                auto line = output.begin();
+                for (;;)
+                {
+                    fileWriteStream << *line;
+                    if (++line == output.end())
+                    {
+                        break;
+                    }
+                    fileWriteStream << INIStringUtil::endl;
+                }
+            }
+            return INIFileUtil::writeFile(filename, fileWriteStream.str());
         }
     };
 

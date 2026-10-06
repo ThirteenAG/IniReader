@@ -11,7 +11,39 @@ class CIniReader
 {
 private:
     std::filesystem::path m_szFileName;
+    std::filesystem::path m_szLoadedFileName;
     mINI::INIStructure m_ini;
+
+    void WriteValue(std::string_view szSection, std::string_view szKey, std::string szValue, bool pretty)
+    {
+        try
+        {
+            mINI::INIFile file(m_szFileName);
+
+            // Pick up the current file contents before changing it, so a failed read at construction
+            // (file locked, not synced yet, ...) or external edits can't make the write drop sections.
+            // Skipped when saving to a different file via SetNewIniPathForSave.
+            if (m_szFileName == m_szLoadedFileName)
+            {
+                std::error_code ec;
+                bool fileExists = std::filesystem::exists(m_szFileName, ec);
+                if (ec)
+                    return;
+
+                if (fileExists)
+                {
+                    mINI::INIStructure current;
+                    if (!file.read(current))
+                        return;
+                    m_ini = current;
+                }
+            }
+
+            m_ini[szSection.data()][szKey.data()] = szValue;
+            file.write(m_ini, pretty);
+        }
+        catch (...) {}
+    }
 
 public:
     CIniReader()
@@ -108,6 +140,7 @@ public:
             m_szFileName = modulePath.parent_path() / szFileName;
         }
 
+        m_szLoadedFileName = m_szFileName;
         mINI::INIFile file(m_szFileName);
         file.read(m_ini);
     }
@@ -201,46 +234,22 @@ public:
     
     void WriteInteger(std::string_view szSection, std::string_view szKey, int iValue, bool pretty = false)
     {
-        try
-        {
-            mINI::INIFile file(m_szFileName);
-            m_ini[szSection.data()][szKey.data()] = std::to_string(iValue);
-            file.write(m_ini, pretty);
-        }
-        catch (...) {}
+        WriteValue(szSection, szKey, std::to_string(iValue), pretty);
     }
     
     void WriteFloat(std::string_view szSection, std::string_view szKey, float fltValue, bool pretty = false)
     {
-        try
-        {
-            mINI::INIFile file(m_szFileName);
-            m_ini[szSection.data()][szKey.data()] = std::to_string(fltValue);
-            file.write(m_ini, pretty);
-        }
-        catch (...) {}
+        WriteValue(szSection, szKey, std::to_string(fltValue), pretty);
     }
     
     void WriteBoolean(std::string_view szSection, std::string_view szKey, bool bolValue, bool pretty = false)
     {
-        try
-        {
-            mINI::INIFile file(m_szFileName);
-            m_ini[szSection.data()][szKey.data()] = bolValue ? "True" : "False";
-            file.write(m_ini, pretty);
-        }
-        catch (...) {}
+        WriteValue(szSection, szKey, bolValue ? "True" : "False", pretty);
     }
     
     void WriteString(std::string_view szSection, std::string_view szKey, std::string_view szValue, bool pretty = false)
     {
-        try
-        {
-            mINI::INIFile file(m_szFileName);
-            m_ini[szSection.data()][szKey.data()] = szValue.data();
-            file.write(m_ini, pretty);
-        }
-        catch (...) {}
+        WriteValue(szSection, szKey, std::string(szValue), pretty);
     }
 };
 
