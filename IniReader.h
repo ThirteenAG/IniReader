@@ -126,6 +126,14 @@ public:
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&lpModuleName, &hm);
         GetModuleFileNameW(hm, buffer, ARRAYSIZE(buffer));
         std::filesystem::path modulePath(buffer);
+        // The module's name as it is on disk: a loader may load it through a path in another case, and the ini made
+        // next to it should match the plugin's name
+        WIN32_FIND_DATAW found{};
+        if (HANDLE search = FindFirstFileExW(modulePath.c_str(), FindExInfoBasic, &found, FindExSearchNameMatch, nullptr, 0); search != INVALID_HANDLE_VALUE)
+        {
+            FindClose(search);
+            modulePath.replace_filename(found.cFileName);
+        }
 
         if (szFileName.is_absolute())
         {
